@@ -1,0 +1,98 @@
+{
+  "colores": [
+    {
+      "id_color": 1,
+      "nombre": "Rojo Carmesí",
+      "codigo_hex": "#DC143C",
+      "familia": "Cálidos",
+      "stock": 100,
+      "fecha_registro": "2025-10-17 08:33:15"
+    },
+    {
+      "id_color": 2,
+      "nombre": "Azul Marino",
+      "codigo_hex": "#000080",
+      "familia": "Fríos",
+      "stock": 150,
+      "fecha_registro": "2025-10-17 08:33:15"
+    },
+    {
+      "id_color": 3,
+      "nombre": "Verde Esmeralda",
+      "codigo_hex": "#50C878",
+      "familia": "Fríos",
+      "stock": 80,
+      "fecha_registro": "2025-10-17 08:33:15"
+    },
+    {
+      "id_color": 4,
+      "nombre": "Beige",
+      "codigo_hex": "#F5F5DC",
+      "familia": "Neutros",
+      "stock": 200,
+      "fecha_registro": "2025-10-17 08:33:15"
+    }
+  ],
+  "disenos": [
+    {
+      "id_diseno": 1,
+      "nombre": "Bolsa Clásica Roja",
+      "tipo_modelo": "Simple",
+      "descripcion": "Diseño simple con un solo color",
+      "colores_ids": [
+        1
+      ],
+      "fecha_creacion": "2025-10-17 08:33:15",
+      "activo": true
+    },
+    {
+      "id_diseno": 2,
+      "nombre": "Bolsa Bicolor Marina",
+      "tipo_modelo": "Combinado",
+      "descripcion": "Combinación de dos colores complementarios",
+      "colores_ids": [
+        2,
+        4
+      ],
+      "fecha_creacion": "2025-10-17 08:33:15",
+      "activo": true
+    }
+  ],
+  "materiales": [
+    {
+      "id_material": 1,
+      "nombre": "Tela de Algodón",
+      "tipo": "Tela",
+      "unidad_medida": "metros",
+      "precio_unitario": 45.5,
+      "stock_actual": 50.0,
+      "stock_minimo": 0,
+      "fecha_registro": "2025-10-17 08:33:15"
+    },
+    {
+      "id_material": 2,
+      "nombre": "Hilo Polyester",
+      "tipo": "Hilo",
+      "unidad_medida": "carretes",
+      "precio_unitario": 12.0,
+      "stock_actual": 30,
+      "stock_minimo": 0,
+      "fecha_registro": "2025-10-17 08:33:15"
+    },
+    {
+      "id_material": 3,
+      "nombre": "Asa de Cuero",
+      "tipo": "Asa",
+      "unidad_medida": "unidades",
+      "precio_unitario": 25.0,
+      "stock_actual": 15,
+      "stock_minimo": 0,
+      "fecha_registro": "2025-10-17 08:33:15"
+    }
+  ],
+  "contadores": {
+    "next_color_id": 5,
+    "next_diseno_id": 3,
+    "next_material_id": 4
+  }
+}
