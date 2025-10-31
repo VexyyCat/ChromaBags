@@ -1,5 +1,7 @@
 from modules.modcatal import CatalogosManager
 from modules.modgescli import ClientesManager
+from modules.modcomcolo import CombinacionColoresManager
+from modules.modboldis import DisenoModelosManager
 
 print("Módulo de catálogos cargado correctamente.")
 
@@ -129,3 +131,152 @@ gescli_nuevo = ClientesManager()
 if gescli_nuevo.cargar_clientes():
     print("✓ Base de clientes cargada exitosamente")
     print(f"Total de clientes cargados: {len(gescli_nuevo.clientes)}")
+
+
+print("\nMódulo de combinaciones de colores cargado correctamente.")
+gescomcolo = CombinacionColoresManager()
+    
+# Color base para ejemplos
+color_base = "#3498DB"  # Azul
+    
+print("=== GENERACIÓN DE ESQUEMAS DE COLOR ===\n")
+    
+# Generar diferentes tipos de esquemas
+print(f"Color base: {color_base}")
+print()
+    
+print("1. Esquema Complementario:")
+colores = gescomcolo.generar_complementario(color_base)
+for i, color in enumerate(colores, 1):
+    print(f"   Color {i}: {color}")
+    
+print("\n2. Esquema Análogo (3 colores):")
+colores = gescomcolo.generar_analogo(color_base, 3)
+for i, color in enumerate(colores, 1):
+    print(f"   Color {i}: {color}")
+    
+print("\n3. Esquema Triádico:")
+colores = gescomcolo.generar_triadico(color_base)
+for i, color in enumerate(colores, 1):
+    print(f"   Color {i}: {color}")
+    
+print("\n4. Esquema Tetrádico:")
+colores = gescomcolo.generar_tetradico(color_base)
+for i, color in enumerate(colores, 1):
+    print(f"   Color {i}: {color}")
+    
+print("\n5. Esquema Monocromático:")
+colores = gescomcolo.generar_monocromatico(color_base, 4)
+for i, color in enumerate(colores, 1):
+    print(f"   Color {i}: {color}")
+    
+print("\n6. Esquema Armónico:")
+colores = gescomcolo.generar_armonico(color_base, 3)
+for i, color in enumerate(colores, 1):
+    print(f"   Color {i}: {color}")
+    
+# Guardar combinaciones
+print("\n=== GUARDANDO COMBINACIONES ===\n")
+    
+comb1 = gescomcolo.guardar_combinacion(
+    "Azul Océano",
+    "Complementario",
+    gescomcolo.generar_complementario(color_base),
+    "Combinación complementaria basada en azul océano"
+)
+print(f"✓ Guardada: {comb1.nombre} (ID: {comb1.id_combinacion})")
+    
+comb2 = gescomcolo.guardar_combinacion(
+    "Armonía Natural",
+    "Análogo",
+    gescomcolo.generar_analogo(color_base, 3),
+    "Colores análogos para diseños naturales"
+)
+print(f"✓ Guardada: {comb2.nombre} (ID: {comb2.id_combinacion})")
+    
+gescomcolo.marcar_favorito(1, True)
+    
+# Análisis de colores
+print("\n=== ANÁLISIS DE COLORES ===\n")
+    
+color1 = "#3498DB"
+color2 = "#E74C3C"
+    
+contraste = gescomcolo.calcular_contraste(color1, color2)
+print(f"Contraste entre {color1} y {color2}: {contraste:.2f}")
+    
+print(f"\n¿{color1} es claro? {gescomcolo.es_color_claro(color1)}")
+print(f"Color de texto sugerido para fondo {color1}: {gescomcolo.sugerir_color_texto(color1)}")
+    
+# Listar combinaciones guardadas
+print("\n=== COMBINACIONES GUARDADAS ===\n")
+for comb in gescomcolo.listar_combinaciones():
+    print(f"- {comb.nombre} ({comb.tipo_esquema})")
+    print(f"  Colores: {', '.join(comb.colores_hex)}")
+    print(f"  Favorito: {'Sí' if comb.favorito else 'No'}")
+    
+# Guardar en archivo
+if gescomcolo.guardar_datos():
+    print("\n✓ Combinaciones guardadas en archivo")
+
+print("\nMódulo de diseños de modelos de bolsa cargado correctamente.")
+gesboldis = DisenoModelosManager()
+    
+print("=== MODELOS DE BOLSA DISPONIBLES ===\n")
+for modelo in gesboldis.listar_modelos():
+    print(f"ID: {modelo.id_modelo} - {modelo.nombre} ({modelo.tipo})")
+    print(f"  Descripción: {modelo.descripcion}")
+    print(f"  Dimensiones: {modelo.dimensiones['ancho']}x{modelo.dimensiones['alto']}x{modelo.dimensiones['fondo']} cm")
+    print(f"  Área superficie: {modelo.obtener_area_superficie():.2f} cm²")
+    print(f"  Asas: {modelo.numero_asas}")
+    print(f"  Requiere forro: {'Sí' if modelo.requiere_forro else 'No'}")
+    print()
+    
+# Crear diseños
+print("=== CREANDO DISEÑOS ===\n")
+    
+# Diseño simple
+diseno1 = gesboldis.crear_diseno(1, "Bolsa Roja Clásica")
+if diseno1:
+    colores_simple = ["#E74C3C"]
+    gesboldis.aplicar_colores_automaticos(diseno1.id_diseno, colores_simple)
+    gesboldis.guardar_diseno(diseno1.id_diseno)
+    print(f"✓ Diseño creado: {diseno1.nombre}")
+    print(f"  Colores aplicados: {diseno1.obtener_paleta_completa()}")
+    
+# Diseño combinado
+diseno2 = gesboldis.crear_diseno(2, "Bolsa Bicolor Azul-Amarillo")
+if diseno2:
+    colores_combinado = ["#3498DB", "#F1C40F"]
+    gesboldis.aplicar_colores_automaticos(diseno2.id_diseno, colores_combinado)
+    gesboldis.guardar_diseno(diseno2.id_diseno)
+    print(f"✓ Diseño creado: {diseno2.nombre}")
+    print(f"  Colores aplicados: {diseno2.obtener_paleta_completa()}")
+    
+# Diseño especial
+diseno3 = gesboldis.crear_diseno(3, "Bolsa Premium Multicolor")
+if diseno3:
+    colores_especial = ["#9B59B6", "#E67E22", "#1ABC9C", "#ECF0F1"]
+    gesboldis.aplicar_colores_automaticos(diseno3.id_diseno, colores_especial)
+    gesboldis.guardar_diseno(diseno3.id_diseno)
+    print(f"✓ Diseño creado: {diseno3.nombre}")
+    print(f"  Colores aplicados: {diseno3.obtener_paleta_completa()}")
+    
+# Estadísticas
+print("\n=== ESTADÍSTICAS ===\n")
+for modelo in gesboldis.listar_modelos():
+    stats = gesboldis.obtener_estadisticas_modelo(modelo.id_modelo)
+    if stats:
+        print(f"{stats['nombre']}:")
+        print(f"  Total de diseños: {stats['total_disenos']}")
+        print(f"  Diseños guardados: {stats['disenos_guardados']}")
+    
+# Colores más usados
+print("\n=== COLORES MÁS UTILIZADOS ===\n")
+colores_top = gesboldis.obtener_colores_mas_usados(5)
+for i, (color, veces) in enumerate(colores_top, 1):
+    print(f"{i}. {color} - usado {veces} veces")
+    
+# Guardar
+if gesboldis.guardar_datos():
+    print("\n✓ Datos guardados exitosamente")
