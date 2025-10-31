@@ -1,26 +1,25 @@
 CREATE SCHEMA IF NOT EXISTS chromabags;
 SET search_path = chromabags;
 
-
-
+-- TIPOS ENUM
 CREATE TYPE esquema_color AS ENUM ('armonico','complementario','analogo');
 CREATE TYPE tipo_modelo AS ENUM ('simple','combinado','especial');
 CREATE TYPE estado_pedido AS ENUM ('pendiente','en_produccion','entregado','cancelado');
 CREATE TYPE estado_cotizacion AS ENUM ('pendiente','aceptada','rechazada','expirada');
-
+CREATE TYPE tipo_cliente AS ENUM ('FRECUENTE', 'PRIMERIZO', 'OCASIONAL');
 
 -- TABLA USUARIO
 CREATE TABLE usuario_admin (
     id_admin SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     correo VARCHAR(150) UNIQUE NOT NULL,
-    contrasena VARCHAR(255) NOT NULL, -- hash de contraseÒa
+    contrasena VARCHAR(255) NOT NULL, -- hash de contrase√±a
     rol VARCHAR(50) DEFAULT 'administrador',
     fecha_registro TIMESTAMP DEFAULT NOW(),
     activo BOOLEAN DEFAULT TRUE
 );
 
--- Trigger para m·ximo 2 administradores activos
+-- Trigger para m√°ximo 2 administradores activos
 CREATE OR REPLACE FUNCTION validar_max_dos_admins()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -45,15 +44,16 @@ CREATE TABLE paletas_colores (
     esquema esquema_color NOT NULL,
     descripcion TEXT
 );
--- TALBA COLORES
+
+-- TABLA COLORES
 CREATE TABLE colores (
     id_color SERIAL PRIMARY KEY,
     nombre_color VARCHAR(100) NOT NULL,
     codigo_hex CHAR(7) NOT NULL CHECK (codigo_hex ~ '^#[0-9A-Fa-f]{6}$'),
     id_paleta INT REFERENCES paletas_colores(id_paleta) ON DELETE SET NULL
 );
--- TABLA MODELOS_BOLSAS
 
+-- TABLA MODELOS_BOLSAS
 CREATE TABLE modelos_bolsas (
     id_modelo SERIAL PRIMARY KEY,
     nombre_modelo VARCHAR(100) NOT NULL,
@@ -76,8 +76,7 @@ CREATE TABLE combinaciones (
     fecha_creacion TIMESTAMP DEFAULT NOW()
 );
 
---TABLA MATERIALES 
-
+-- TABLA MATERIALES 
 CREATE TABLE materiales (
     id_material SERIAL PRIMARY KEY,
     nombre_material VARCHAR(120) NOT NULL,
@@ -95,6 +94,17 @@ CREATE TABLE inventario_materiales (
     fecha_actualizacion TIMESTAMP DEFAULT NOW()
 );
 
+-- TABLA CLIENTES 
+CREATE TABLE clientes (
+    id_cliente SERIAL PRIMARY KEY,
+    nombre_cliente VARCHAR(200) NOT NULL,
+    telefono VARCHAR(30),
+    correo VARCHAR(150),
+    direccion TEXT,
+    tipo_cliente tipo_cliente NOT NULL DEFAULT 'PRIMERIZO',
+    fecha_registro TIMESTAMP DEFAULT NOW()
+);
+
 -- TABLA PRODUCTOS_TERMINADOS
 CREATE TABLE productos_terminados (
     id_producto SERIAL PRIMARY KEY,
@@ -106,15 +116,6 @@ CREATE TABLE productos_terminados (
     stock INT DEFAULT 0,
     fecha_registro TIMESTAMP DEFAULT NOW()
 );
--- TABLA CLIENTES
-CREATE TABLE clientes (
-    id_cliente SERIAL PRIMARY KEY,
-    nombre_cliente VARCHAR(200) NOT NULL,
-    telefono VARCHAR(30),
-    correo VARCHAR(150),
-    direccion TEXT,
-    fecha_registro TIMESTAMP DEFAULT NOW()
-);
 
 -- TABLA COTIZACIONES
 CREATE TABLE cotizaciones (
@@ -124,7 +125,6 @@ CREATE TABLE cotizaciones (
     total_estimado NUMERIC(14,2),
     estado estado_cotizacion DEFAULT 'pendiente'
 );
-
 
 -- TABLA DETALLE_COTIZACION
 CREATE TABLE detalle_cotizacion (
@@ -146,7 +146,6 @@ CREATE TABLE pedidos (
     total NUMERIC(14,2)
 );
 
-
 -- TABLA DETALLE_PEDIDO
 CREATE TABLE detalle_pedido (
     id_detalle SERIAL PRIMARY KEY,
@@ -157,9 +156,7 @@ CREATE TABLE detalle_pedido (
     subtotal NUMERIC(12,2)
 );
 
-
-
---- Consulta SQL para generar el cat·logo
+-- Consulta SQL para generar el cat√°logo
 SELECT 
     pt.id_producto,
     pt.nombre_producto,
@@ -171,52 +168,14 @@ SELECT
     ca.nombre_color AS color_asa,
     pt.precio_sugerido,
     pt.stock
-FROM chromabags.productos_terminados pt
-JOIN chromabags.modelos_bolsas mb ON pt.id_modelo = mb.id_modelo
-LEFT JOIN chromabags.combinaciones c ON pt.id_combinacion = c.id_combinacion
-LEFT JOIN chromabags.colores cp ON c.id_color_principal = cp.id_color
-LEFT JOIN chromabags.colores cs ON c.id_color_secundario = cs.id_color
-LEFT JOIN chromabags.colores ch ON c.id_color_hilo = ch.id_color
-LEFT JOIN chromabags.colores ca ON c.id_color_asa = ca.id_color
+FROM productos_terminados pt
+JOIN modelos_bolsas mb ON pt.id_modelo = mb.id_modelo
+LEFT JOIN combinaciones c ON pt.id_combinacion = c.id_combinacion
+LEFT JOIN colores cp ON c.id_color_principal = cp.id_color
+LEFT JOIN colores cs ON c.id_color_secundario = cs.id_color
+LEFT JOIN colores ch ON c.id_color_hilo = ch.id_color
+LEFT JOIN colores ca ON c.id_color_asa = ca.id_color
 ORDER BY pt.nombre_producto;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
