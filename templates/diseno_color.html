@@ -1,0 +1,552 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="contenedor-diseno">
+    <div class="panel-izquierdo">
+        <h2>Diseño & colores</h2>
+
+        <form method="POST" action="{{ url_for('diseno_color') }}" id="form-diseno">
+
+            <label>Esquema de color</label>
+            <select name="esquema_color" id="esquema_color" required>
+                <option value="armonico">Armónicos</option>
+                <option value="complementario">Complementarios</option>
+                <option value="analogo">Análogos</option>
+                <option value="monocromatico">Monocromáticos</option>
+                <option value="triadico">Triádicos</option>
+            </select>
+
+            <label>Modelo de bolsa</label>
+            <select name="modelo_bolsa" id="modelo_bolsa" required onchange="actualizarVistaModelo()">
+                <option value="">-- Selecciona un modelo --</option>
+                {% for m in modelos %}
+                <option value="{{ m[0] }}" data-tipo="{{ m[2] }}">{{ m[1] }} ({{ m[2] }})</option>
+                {% endfor %}
+            </select>
+
+            <label>Paleta de colores</label>
+            <select name="id_paleta" id="id_paleta" required>
+                <option value="">-- Selecciona una paleta --</option>
+                {% for p in paletas %}
+                <option value="{{ p[0] }}">{{ p[1] }} - {{ p[2] }}</option>
+                {% endfor %}
+            </select>
+
+            <div id="colores-paleta" class="paleta-dinamica">
+                <p style="color: #666; font-style: italic;">Selecciona una paleta para ver sus colores</p>
+            </div>
+
+            <!-- Herramientas de diseño avanzado (solo para modelo especial) -->
+            <div id="herramientas-especial" style="display:none; margin-top:20px;">
+                <h4>Herramientas de diseño especial</h4>
+                <div class="toolbox">
+                    <button type="button" onclick="agregarRectangulo()">➕ Rectángulo</button>
+                    <button type="button" onclick="limpiarToolbox()">🗑️ Limpiar</button>
+                    <label style="display:flex; align-items:center; gap:8px;">
+                        Color:
+                        <input type="color" id="colorPersonalizado" value="#ff69b4" title="Selecciona un color">
+                    </label>
+                </div>
+                <p style="font-size:0.9em; color:#666;">Arrastra los rectángulos en el área de vista previa.</p>
+            </div>
+
+            <label>Nombre de la combinación</label>
+            <input type="text" name="nombre_combinacion" id="nombre_combinacion" 
+                   placeholder="Ej. Rosa intenso con verde primavera" required>
+
+            <div class="botones">
+                <button type="button" id="aplicar" class="btn-rosa">Aplicar al modelo</button>
+                <button type="submit" class="btn-borde">Guardar combinación</button>
+            </div>
+        </form>
+
+        <!-- Combinaciones guardadas -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #ddd;">
+            <h3>Combinaciones guardadas</h3>
+            {% if combinaciones %}
+                <div class="lista-combinaciones" style="max-height: 300px; overflow-y: auto;">
+                    {% for c in combinaciones %}
+                    <div class="item-combinacion" style="padding: 10px; margin: 5px 0; background: #f9f9f9; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>{{ c[1] }}</strong><br>
+                            <small style="color: #666;">Esquema: {{ c[2] }} | {{ c[3] }}</small>
+                        </div>
+                        <button data-id="{{ c[0] }}" onclick="eliminarCombinacion(this.getAttribute('data-id'))"
+                                style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
+                            Eliminar
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color: #666; font-style: italic;">No hay combinaciones guardadas</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="panel-derecho">
+        <h3>Previsualización</h3>
+        <div class="preview">
+            <div id="previewBox" class="preview-box">
+                <div class="preview-elementos">
+                    <div id="preview-cuerpo" class="preview-cuerpo"></div>
+                    <div id="preview-asa-izq" class="preview-asa"></div>
+                    <div id="preview-asa-der" class="preview-asa"></div>
+                    <div id="preview-detalle" class="preview-detalle"></div>
+                </div>
+            </div>
+            <p id="modeloNombre" style="text-align: center; margin-top: 10px; font-weight: bold;">
+                Selecciona un modelo
+            </p>
+            <p id="modeloTipo" style="text-align: center; color: #666; font-size: 0.9em;"></p>
+        </div>
+
+        <div class="info-colores" style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+            <h4 style="margin-top: 0;">Colores aplicados:</h4>
+            <div id="colores-aplicados" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <p style="color: #999; font-style: italic;">Aplica colores para verlos aquí</p>
+            </div>
+        </div>
+
+        <div class="botones-exportar">
+            <button id="exportPNG" class="btn-rosa">Exportar PNG</button>
+            <button id="exportJPG" class="btn-rosa">Exportar JPG</button>
+            <button id="resetPreview" class="btn-borde" style="margin-left: 10px;">Limpiar</button>
+        </div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+let modeloSeleccionado = null;
+
+// === GENERAR PALETA TIPO PAINT ===
+function generarPaletaPaint() {
+    const cont = document.getElementById("colores-paleta");
+    cont.innerHTML = "";
+
+    // Crea una caja contenedora (tipo paint)
+    const caja = document.createElement("div");
+    caja.className = "paleta-paint";
+
+    const pasos = [0, 51, 102, 153, 204, 255];
+    pasos.forEach(r => {
+        pasos.forEach(g => {
+            pasos.forEach(b => {
+                const hex = "#" + [r,g,b].map(x => x.toString(16).padStart(2,"0")).join("").toUpperCase();
+                const div = document.createElement("div");
+                div.className = "color-cell";
+                div.style.backgroundColor = hex;
+                div.title = hex;
+                div.addEventListener("click", () => aplicarColorInstantaneo(hex));
+                caja.appendChild(div);
+            });
+        });
+    });
+
+    cont.appendChild(caja);
+}
+
+// === CAMBIO DE MODELO ===
+function actualizarVistaModelo() {
+    const select = document.getElementById("modelo_bolsa");
+    const opcion = select.options[select.selectedIndex];
+    if (!opcion || !opcion.value) return;
+
+    const tipo = opcion.getAttribute("data-tipo");
+    modeloSeleccionado = { nombre: opcion.text, tipo };
+
+    // limpiar preview al cambiar modelo
+    resetPreview();
+
+    // mostrar/ocultar herramientas
+    if (tipo && tipo.toLowerCase() === "especial") {
+        document.getElementById("herramientas-especial").style.display = "block";
+    } else {
+        document.getElementById("herramientas-especial").style.display = "none";
+    }
+}
+
+// === APLICAR COLOR A LA BOLSA ===
+function aplicarColorInstantaneo(hex) {
+    if (!modeloSeleccionado) {
+        alert("Selecciona un modelo primero");
+        return;
+    }
+
+    const tipo = modeloSeleccionado.tipo ? modeloSeleccionado.tipo.toLowerCase() : "simple";
+    const cuerpo = document.getElementById("preview-cuerpo");
+    const asaIzq = document.getElementById("preview-asa-izq");
+    const asaDer = document.getElementById("preview-asa-der");
+    const detalle = document.getElementById("preview-detalle");
+
+    if (tipo === "simple") {
+        cuerpo.style.backgroundColor = hex;
+        const asa = esClaroOscuro(hex) ? "#000000" : "#FFFFFF";
+        asaIzq.style.backgroundColor = asa;
+        asaDer.style.backgroundColor = asa;
+    } else if (tipo === "combinado") {
+        const complementario = HSLToHex((hexToHSL(hex).h + 180) % 360, 80, 50);
+        cuerpo.style.background = `linear-gradient(to bottom, ${complementario} 0 25%, ${hex} 25% 100%)`;
+        detalle.style.display = "block";
+        detalle.style.backgroundColor = complementario;
+    } else if (tipo === "especial") {
+        cuerpo.style.backgroundColor = hex;
+    }
+}
+
+// === UTILIDADES ===
+function esClaroOscuro(hexColor) {
+    const r = parseInt(hexColor.substr(1,2), 16);
+    const g = parseInt(hexColor.substr(3,2), 16);
+    const b = parseInt(hexColor.substr(5,2), 16);
+    const luminosidad = (0.299*r + 0.587*g + 0.114*b) / 255;
+    return luminosidad > 0.5;
+}
+
+function hexToHSL(H) {
+    let r = 0, g = 0, b = 0;
+    if (H.length == 4) {
+        r = "0x" + H[1] + H[1];
+        g = "0x" + H[2] + H[2];
+        b = "0x" + H[3] + H[3];
+    } else if (H.length == 7) {
+        r = "0x" + H[1] + H[2];
+        g = "0x" + H[3] + H[4];
+        b = "0x" + H[5] + H[6];
+    }
+    r /= 255; g /= 255; b /= 255;
+    const cmin = Math.min(r,g,b);
+    const cmax = Math.max(r,g,b);
+    const delta = cmax - cmin;
+    let h = 0, s = 0, l = 0;
+    if (delta === 0) h = 0;
+    else if (cmax === r) h = ((g - b) / delta) % 6;
+    else if (cmax === g) h = (b - r) / delta + 2;
+    else h = (r - g) / delta + 4;
+    h = Math.round(h * 60);
+    if (h < 0) h += 360;
+    l = (cmax + cmin) / 2;
+    s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+    s = +(s * 100).toFixed(1);
+    l = +(l * 100).toFixed(1);
+    return {h, s, l};
+}
+
+function HSLToHex(h, s, l) {
+    s /= 100; l /= 100;
+    let c = (1 - Math.abs(2 * l - 1)) * s,
+        x = c * (1 - Math.abs((h / 60) % 2 - 1)),
+        m = l - c/2, r = 0, g = 0, b = 0;
+    if (0 <= h && h < 60) { r = c; g = x; b = 0; }
+    else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
+    else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
+    else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
+    else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
+    else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+    r = Math.round((r + m) * 255);
+    g = Math.round((g + m) * 255);
+    b = Math.round((b + m) * 255);
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b)
+        .toString(16).slice(1).toUpperCase();
+}
+
+// === HERRAMIENTAS ===
+function agregarRectangulo() {
+    const color = document.getElementById("colorPersonalizado").value;
+    const rect = document.createElement("div");
+    rect.classList.add("rect-draggable");
+    rect.style.backgroundColor = color;
+    rect.style.left = "60px";
+    rect.style.top = "40px";
+    rect.style.width = "60px";
+    rect.style.height = "36px";
+    document.querySelector(".preview-box").appendChild(rect);
+    hacerDraggable(rect);
+}
+
+function limpiarToolbox() {
+    document.querySelectorAll(".rect-draggable").forEach(el => el.remove());
+}
+
+function hacerDraggable(el) {
+    let offsetX = 0, offsetY = 0, isDown = false;
+    el.addEventListener("mousedown", function(e) {
+        isDown = true;
+        offsetX = e.offsetX;
+        offsetY = e.offsetY;
+        el.style.zIndex = 999;
+    });
+    document.addEventListener("mouseup", function() {
+        isDown = false;
+        el.style.zIndex = 1;
+    });
+    document.addEventListener("mousemove", function(e) {
+        if (!isDown) return;
+        const box = document.querySelector(".preview-box").getBoundingClientRect();
+        let x = e.clientX - box.left - offsetX;
+        let y = e.clientY - box.top - offsetY;
+        x = Math.max(0, Math.min(box.width - el.offsetWidth, x));
+        y = Math.max(0, Math.min(box.height - el.offsetHeight, y));
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+    });
+}
+
+function resetPreview() {
+    document.getElementById("preview-cuerpo").style.backgroundColor = "#e0e0e0";
+    document.getElementById("preview-asa-izq").style.backgroundColor = "#999";
+    document.getElementById("preview-asa-der").style.backgroundColor = "#999";
+    document.getElementById("preview-detalle").style.display = "none";
+    limpiarToolbox();
+}
+
+// === INICIO ===
+window.addEventListener("DOMContentLoaded", () => {
+    generarPaletaPaint();
+});
+</script>
+
+<style>
+/* --- mantuve tu CSS y añadí estilos para toolbox/rects --- */
+.contenedor-diseno {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    padding: 20px;
+}
+
+.panel-izquierdo, .panel-derecho {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.panel-izquierdo form label {
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #333;
+}
+
+.panel-izquierdo form select,
+.panel-izquierdo form input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.paleta-dinamica {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 5px;
+    min-height: 80px;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.color-box {
+    width: 50px;
+    height: 50px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    border: 2px solid white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 2px;
+}
+
+.color-box:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.botones {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn-rosa, .btn-borde {
+    flex: 1;
+    padding: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.btn-rosa {
+    background: #ff69b4;
+    color: white;
+    border: none;
+}
+
+.btn-rosa:hover {
+    background: #ff1493;
+    transform: translateY(-2px);
+}
+
+.btn-borde {
+    background: white;
+    color: #ff69b4;
+    border: 2px solid #ff69b4;
+}
+
+.btn-borde:hover {
+    background: #ff69b4;
+    color: white;
+}
+
+.preview {
+    background: #f0f0f0;
+    padding: 30px;
+    border-radius: 10px;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-box {
+    width: 200px;
+    height: 250px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.preview-elementos {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.preview-cuerpo {
+    width: 100%;
+    height: 100%;
+    background-color: #e0e0e0;
+    transition: background-color 0.3s;
+}
+
+.preview-asa {
+    position: absolute;
+    width: 15px;
+    height: 80px;
+    background-color: #999;
+    top: -20px;
+    border-radius: 15px;
+    transition: background-color 0.3s;
+}
+
+#preview-asa-izq {
+    left: 30px;
+}
+
+#preview-asa-der {
+    right: 30px;
+}
+
+.preview-detalle {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 30px;
+    border-radius: 5px;
+    display: none;
+    transition: background-color 0.3s;
+}
+
+.botones-exportar {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.botones-exportar button {
+    flex: 1;
+    padding: 10px;
+}
+
+/* Herramientas estilo */
+#herramientas-especial .toolbox {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+#herramientas-especial button {
+    padding: 8px 12px;
+    border-radius: 5px;
+    background: #ff69b4;
+    border: none;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+#herramientas-especial button:hover {
+    background: #ff1493;
+}
+
+.rect-draggable {
+    position: absolute;
+    width: 50px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: move;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1;
+}
+
+@media (max-width: 768px) {
+    .contenedor-diseno {
+        grid-template-columns: 1fr;
+    }
+}
+/* Caja de paleta tipo Paint */
+.paleta-paint {
+    display: grid;
+    grid-template-columns: repeat(18, 1fr);
+    grid-auto-rows: 20px;
+    gap: 2px;
+    padding: 8px;
+    background: #fff;
+    border-radius: 8px;
+    max-height: 260px;
+    overflow-y: scroll;
+    border: 1px solid #ddd;
+}
+
+.color-cell {
+    width: 100%;
+    height: 20px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.color-cell:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 3px rgba(0,0,0,0.4);
+    z-index: 2;
+}
+
+</style>
+{% endblock %}

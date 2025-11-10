@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel-general">
+    <h1>Catálogo de Productos</h1>
+
+    <!-- Filtros opcionales (sin cambiar rutas) -->
+    <div class="filtros-catalogo" style="margin-bottom: 20px;">
+        <form method="GET" action="{{ url_for('catalogo') }}" style="display: flex; gap: 10px; align-items: center;">
+            <label for="tipo">Filtrar por tipo:</label>
+            <select name="tipo" id="tipo" onchange="this.form.submit()" style="padding: 5px;">
+                <option value="">Todos los tipos</option>
+                <option value="estandar" {% if request.args.get('tipo') == 'estandar' %}selected{% endif %}>Estándar</option>
+                <option value="especial" {% if request.args.get('tipo') == 'especial' %}selected{% endif %}>Especial</option>
+                <option value="premium" {% if request.args.get('tipo') == 'premium' %}selected{% endif %}>Premium</option>
+            </select>
+            
+            {% if modelos %}
+            <label for="modelo" style="margin-left: 15px;">Filtrar por modelo:</label>
+            <select name="modelo" id="modelo" onchange="this.form.submit()" style="padding: 5px;">
+                <option value="">Todos los modelos</option>
+                {% for modelo in modelos %}
+                <option value="{{ modelo.id_modelo }}" {% if request.args.get('modelo') == modelo.id_modelo|string %}selected{% endif %}>
+                    {{ modelo.nombre }}
+                </option>
+                {% endfor %}
+            </select>
+            {% endif %}
+            
+            {% if request.args.get('tipo') or request.args.get('modelo') %}
+            <a href="{{ url_for('catalogo') }}" class="btn-rosa" style="margin-left: 10px; padding: 5px 15px; text-decoration: none;">
+                Limpiar filtros
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Contador de productos -->
+    <div style="margin-bottom: 15px; color: #666;">
+        <strong>Total de productos: {{ productos|length }}</strong>
+        {% if request.args.get('tipo') %}
+        <span>(filtrados por tipo: {{ request.args.get('tipo') }})</span>
+        {% endif %}
+        {% if request.args.get('modelo') %}
+        <span>(filtrados por modelo)</span>
+        {% endif %}
+    </div>
+
+    <div class="grid-catalogo">
+        {% if productos %}
+            {% for p in productos %}
+            <div class="tarjeta">
+                <div class="info">
+                    <h3>{{ p[0] }}</h3>
+                    <p><strong>Modelo:</strong> {{ p[1] }}</p>
+                    <p><strong>Tipo:</strong> {{ p[2] }}</p>
+                    <p><strong>Color principal:</strong> {{ p[3] }}</p>
+                    <p><strong>Precio:</strong> ${{ "%.2f"|format(p[4]) }}</p>
+                    <p><strong>Stock:</strong> 
+                        <span {% if p[5] == 0 %}style="color: red;"{% elif p[5] < 5 %}style="color: orange;"{% else %}style="color: green;"{% endif %}>
+                            {{ p[5] }}
+                            {% if p[5] == 0 %}
+                            (Agotado)
+                            {% elif p[5] < 5 %}
+                            (Pocas unidades)
+                            {% endif %}
+                        </span>
+                    </p>
+                </div>
+                <button class="btn-rosa" onclick="verDetalles('{{ p[0] }}', '{{ p[1] }}', '{{ p[2] }}', '{{ p[3] }}', '{{ p[4] }}', '{{ p[5] }}')">
+                    Ver detalles
+                </button>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">
+                <p style="font-size: 1.2em;">No se encontraron productos con los filtros seleccionados.</p>
+                <a href="{{ url_for('catalogo') }}" class="btn-rosa" style="display: inline-block; margin-top: 15px; text-decoration: none;">
+                    Ver todos los productos
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para detalles del producto -->
+<div id="modalDetalles" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; position: relative;">
+        <button onclick="cerrarModal()" style="position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+        <h2 id="detalle-nombre" style="margin-bottom: 20px;"></h2>
+        <div id="detalle-info" style="line-height: 1.8;">
+            <!-- Se llenará dinámicamente -->
+        </div>
+        <button class="btn-rosa" onclick="cerrarModal()" style="margin-top: 20px; width: 100%;">
+            Cerrar
+        </button>
+    </div>
+</div>
+
+<script>
+function verDetalles(nombre, modelo, tipo, color, precio, stock) {
+    document.getElementById('detalle-nombre').textContent = nombre;
+    
+    let stockColor = 'green';
+    let stockText = stock + ' unidades';
+    if (stock === 0) {
+        stockColor = 'red';
+        stockText = 'Agotado';
+    } else if (stock < 5) {
+        stockColor = 'orange';
+        stockText = stock + ' unidades (Pocas disponibles)';
+    }
+    
+    let disponibilidad = stock > 0 ? 'Disponible' : 'No disponible';
+    
+    document.getElementById('detalle-info').innerHTML = `
+        <p><strong>Modelo:</strong> ${modelo}</p>
+        <p><strong>Tipo:</strong> ${tipo}</p>
+        <p><strong>Color Principal:</strong> ${color}</p>
+        <p><strong>Precio:</strong> $${precio.toFixed(2)}</p>
+        <p><strong>Stock:</strong> <span style="color: ${stockColor};">${stockText}</span></p>
+        <p><strong>Disponibilidad:</strong> <span style="color: ${stockColor};">${disponibilidad}</span></p>
+        <hr style="margin: 15px 0;">
+        <p style="font-size: 0.9em; color: #666;">
+            ${stock > 0 ? 'Este producto está disponible para compra inmediata.' : 'Producto temporalmente agotado. Contacta para reposición.'}
+        </p>
+    `;
+    
+    document.getElementById('modalDetalles').style.display = 'flex';
+}
+
+function cerrarModal() {
+    document.getElementById('modalDetalles').style.display = 'none';
+}
+
+// Cerrar modal al hacer clic fuera de él
+document.getElementById('modalDetalles').addEventListener('click', function(e) {
+    if (e.target === this) {
+        cerrarModal();
+    }
+});
+
+// Cerrar modal con la tecla ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        cerrarModal();
+    }
+});
+
+// Resaltar productos con bajo stock
+document.addEventListener('DOMContentLoaded', function() {
+    const tarjetas = document.querySelectorAll('.tarjeta');
+    tarjetas.forEach(tarjeta => {
+        const stockText = tarjeta.querySelector('.info p:last-child strong').nextSibling.textContent.trim();
+        const stock = parseInt(stockText);
+        
+        if (stock === 0) {
+            tarjeta.style.opacity = '0.6';
+            tarjeta.style.border = '2px solid #ff4444';
+        } else if (stock < 5) {
+            tarjeta.style.border = '2px solid #ffa500';
+        }
+    });
+});
+</script>
+
+<style>
+/* Estilos adicionales sin cambiar el diseño base */
+.filtros-catalogo select {
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+}
+
+.filtros-catalogo select:hover {
+    border-color: #ff69b4;
+}
+
+.tarjeta {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tarjeta:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+#modalDetalles {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}
